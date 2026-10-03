@@ -10,16 +10,16 @@
 #
 # The blocklist has one string per line, matched case-insensitively. Blank lines and lines
 # starting with # are ignored. It is never stored in this repo:
-#   locally: $BLUEPRINT_BLOCKLIST_FILE, or ~/.config/blueprint/blocklist.txt
-#   in CI:   the BLUEPRINT_BLOCKLIST repository secret, written to a temp file by the workflow
+#   locally: $VADE_BLOCKLIST_FILE, or ~/.config/vade/blocklist.txt
+#   in CI:   the VADE_BLOCKLIST repository secret, written to a temp file by the workflow
 #
 # A public commit identity can contain a blocklisted string, like the username in a GitHub
 # noreply email. The optional allowed identities list names those identities, one
 # "Name <email>" per line, each matching a whole identity case-insensitively. It exempts commit
 # authors and committers only, never file contents, paths or messages. Same format rules, and
 # also never stored in this repo:
-#   locally: $BLUEPRINT_ALLOWED_IDENTITIES_FILE, or ~/.config/blueprint/allowed-identities.txt
-#   in CI:   the BLUEPRINT_ALLOWED_IDENTITIES repository secret
+#   locally: $VADE_ALLOWED_IDENTITIES_FILE, or ~/.config/vade/allowed-identities.txt
+#   in CI:   the VADE_ALLOWED_IDENTITIES repository secret
 #
 # Output names commits and files but never the matched text, because CI logs on a public
 # repo are public too. Any error while matching counts as a match, so the check fails closed.
@@ -27,8 +27,8 @@
 set -eu
 
 mode="${1:-}"
-blocklist="${BLUEPRINT_BLOCKLIST_FILE:-$HOME/.config/blueprint/blocklist.txt}"
-allowlist="${BLUEPRINT_ALLOWED_IDENTITIES_FILE:-$HOME/.config/blueprint/allowed-identities.txt}"
+blocklist="${VADE_BLOCKLIST_FILE:-$HOME/.config/vade/blocklist.txt}"
+allowlist="${VADE_ALLOWED_IDENTITIES_FILE:-$HOME/.config/vade/allowed-identities.txt}"
 failed=0
 
 usage() {
