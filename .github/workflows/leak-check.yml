@@ -1,6 +1,6 @@
-# Blocks secrets and personal data. The blocklist comes from the BLUEPRINT_BLOCKLIST
+# Blocks secrets and personal data. The blocklist comes from the VADE_BLOCKLIST
 # repository secret (one string per line). Public commit identities that contain a
-# blocklisted string come from the optional BLUEPRINT_ALLOWED_IDENTITIES secret
+# blocklisted string come from the optional VADE_ALLOWED_IDENTITIES secret
 # (one "Name <email>" per line). The check never prints either.
 name: Leak check
 
@@ -33,11 +33,11 @@ jobs:
 
       - name: Check every commit for secrets and personal data
         env:
-          BLUEPRINT_BLOCKLIST: ${{ secrets.BLUEPRINT_BLOCKLIST }}
-          BLUEPRINT_ALLOWED_IDENTITIES: ${{ secrets.BLUEPRINT_ALLOWED_IDENTITIES }}
+          VADE_BLOCKLIST: ${{ secrets.VADE_BLOCKLIST }}
+          VADE_ALLOWED_IDENTITIES: ${{ secrets.VADE_ALLOWED_IDENTITIES }}
         run: |
-          printf '%s\n' "$BLUEPRINT_BLOCKLIST" > "$RUNNER_TEMP/blocklist.txt"
-          printf '%s\n' "$BLUEPRINT_ALLOWED_IDENTITIES" > "$RUNNER_TEMP/allowed-identities.txt"
-          export BLUEPRINT_BLOCKLIST_FILE="$RUNNER_TEMP/blocklist.txt"
-          export BLUEPRINT_ALLOWED_IDENTITIES_FILE="$RUNNER_TEMP/allowed-identities.txt"
+          printf '%s\n' "$VADE_BLOCKLIST" > "$RUNNER_TEMP/blocklist.txt"
+          printf '%s\n' "$VADE_ALLOWED_IDENTITIES" > "$RUNNER_TEMP/allowed-identities.txt"
+          export VADE_BLOCKLIST_FILE="$RUNNER_TEMP/blocklist.txt"
+          export VADE_ALLOWED_IDENTITIES_FILE="$RUNNER_TEMP/allowed-identities.txt"
           bash scripts/leak-check.sh --all
