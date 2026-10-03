@@ -67,7 +67,7 @@ You look and act through the dashboard, and you talk to the agent. Both change r
 3. **One owner for everything.** Every file, service, credential and background process has one writer. Everyone else reads.
 4. **Judgement to the agent, rules to code, the final say to you.** The agent handles what needs thought. Code handles what has one right answer. You decide anything that can't be undone.
 5. **Nothing fails silently.** Bad input, stale data, stopped processes and a waiting agent all show up where you look.
-6. **Grow only what's needed.** A project starts as a folder and gains each part when it earns it.
+6. **Grow only what's needed.** A project starts as a folder with a repo and a dashboard, and gains each other part when it earns it.
 
 ## An example: a garden project
 
@@ -123,10 +123,12 @@ Each project gets `<Vault>/Projects/<Project>/`. Open Claude in that folder, bec
 │   └── YYYY-MM.md           the record, one file per month
 ├── Knowledge/               what's been learned (rule 11)
 ├── .claude/skills/          the project's skills (rule 10)
+├── .claude/memory/          the agent's memory for this project (rule 38)
+├── .gitignore               what the repo leaves out (rule 38)
 └── .mcp.json                the project's MCP servers (rule 29)
 ```
 
-Only the folder is required. The rest is added when it's needed (rule 36). A project's folder stays its entry point even when some of its files live elsewhere (rule 7).
+Only the folder, its repo and a dashboard are required. The rest is added when it's needed (rule 36). A project's folder stays its entry point even when some of its files live elsewhere (rule 7).
 
 **Why:** an agent started in the wrong folder has no rules, no memory and the wrong tools.
 
@@ -471,10 +473,9 @@ A project doesn't start with every part. It gains each one when it earns it:
 
 | When | Add |
 |---|---|
-| You start | A folder and one note |
+| You start | A folder, a git repo (rule 38) and a dashboard, even if it shows one line (rule 17) |
 | Claude works on it more than once | A `CLAUDE.md` briefing |
-| There's a status worth seeing | A dashboard |
-| There are rules with one right answer | An engine |
+| There are rules with one right answer | An engine, with tests (rule 40) |
 | A routine repeats | A skill |
 | Its data lives somewhere else | A connector |
 | Something runs in the background | A registry entry |
@@ -486,6 +487,50 @@ A project doesn't start with every part. It gains each one when it earns it:
 The home index, briefings, design system and contracts are part of the system. A change to a pattern updates them in the same step. Date what you write, and delete what no longer holds.
 
 **Why:** an out-of-date map sends you, and the agent, to the wrong place with confidence.
+
+#### 38. Every project is a git repo
+
+- Each project folder is its own git repository. A project can have more than one when parts have separate lives, like a website that deploys on its own.
+- The `.gitignore` leaves out what can be rebuilt: dependencies, build output, caches, logs.
+- The dashboard note, its stylesheet and the agent's memory for the project are in the repo. The memory folder the agent expects is a link to the project's `.claude/memory/`.
+- A pre-commit hook scans every commit for secrets and blocks it on a find. A real secret moves out of the repo (rule 7). Only a confirmed false positive is allowlisted.
+- One setup script, driven by a list of every repo, creates and checks them all. A new project is one more line in the list.
+
+**Why:** without history a bad change can't be undone, and without a repo there's nothing to copy off the machine.
+
+#### 39. Build on a branch, merge into main
+
+- Code changes are made on a feature branch and committed as each working step lands.
+- The project folder is what runs: dashboards, engines and scheduled jobs all load it. So it stays on `main`. Work that takes longer than one sitting goes in a worktree. Dashboard changes, which only Obsidian can preview, may branch in place, and the folder goes back to `main` once they're merged.
+- Merge with `--no-ff`, so one revert undoes a whole feature. Never rewrite history that's been pushed.
+
+**Why:** `main` is always a state that worked, and any feature can be taken back in one step.
+
+#### 40. Tests gate the merge
+
+- Every project with code has automated tests in its language's usual runner. Tests run against scratch copies (rule 28).
+- The briefing names one check command that runs them. Nothing merges into `main` until it passes.
+- New code comes with tests. A project without tests gets them the next time it's worked on.
+
+**Why:** dashboards reload the engine on every redraw, so a broken merge is live straight away.
+
+#### 41. Everything vital survives a dead disk
+
+- Each repo pushes to a private remote after every merge.
+- A project with sensitive data, like health or money, never gets a remote. An encrypted, versioned backup is its off-machine copy.
+- The same backup covers what isn't in any repo: agent transcripts, local app data, and whatever a repo leaves out.
+- A nightly job commits data changes on `main`, pushes, runs the backup and writes a status file. A dashboard shows each repo's branch, its uncommitted and unpushed work, and when the backup last ran (rule 20).
+- Agent memory and transcripts never go anywhere public.
+- Each briefing says where anything vital lives outside its repo.
+
+**Why:** one disk is one point of failure, and a backup nobody can see fails quietly.
+
+#### 42. The agent can do anything you can
+
+- Every action you can take in a project, the agent can take too, through an MCP server or the engine's command line (rule 23). If you can click it, place it or send it, there's a command for it.
+- Rule 12 still holds. The agent does the steps, and anything irreversible or outward waits for your OK.
+
+**Why:** an action only you can take is one the agent can never test, repeat or do for you while you're away.
 
 ## Keeping this repo free of personal data
 
