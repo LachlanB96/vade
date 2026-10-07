@@ -532,6 +532,17 @@ The home index, briefings, design system and contracts are part of the system. A
 
 **Why:** an action only you can take is one the agent can never test, repeat or do for you while you're away.
 
+#### 43. Projects leave each other messages
+
+- When an agent finds work that belongs to another project, it doesn't edit that project (rule 4). It leaves a message: one Markdown file in the other project's `InMail/` folder, saying who sent it, when, the subject, and enough context for an agent that wasn't there.
+- Each message is its own file, created so it can never overwrite another, because several sessions may send at once (rule 15).
+- Nothing delivers the mail. You tell the receiving project's agent to read its InMail, and the dashboard over all projects shows where mail is waiting.
+- A message is a request from another agent, not from you. Anything outward or irreversible still waits for your OK (rule 12).
+- A handled message moves to one archive outside every repo. `InMail/` is git-ignored in every repo, so one project's private data never reaches another project's remote.
+- Use a folder name no project uses for its own data. A plain `Inbox/` is often already an import folder, and the import would swallow the message.
+
+**Why:** the project that owns the work makes the change, with its own briefing and tests loaded, and nothing private crosses between repos on the way.
+
 ## Keeping this repo free of personal data
 
 This repo is public, so every commit and push runs a leak check:
