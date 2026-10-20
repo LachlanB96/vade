@@ -77,8 +77,8 @@ A made-up project that uses every part:
 |---|---|
 | Vault | `Projects/Garden/` holds `garden-config.json` (each plant and how often it needs water), `Log/2026-09.md` (one line per watering) and `Knowledge/` (what worked, what didn't) |
 | Agent | `CLAUDE.md` makes Claude the garden's assistant, says to read `Knowledge/Beds.md` first, and describes a weekly planning routine. A `plan-week` skill asks what's coming up and proposes a schedule |
-| Dashboard | `Garden Dashboard.md` shows what's due today (status), a watering heatmap (analysis), a "log watering" button (actions), and when the forecast last updated |
-| Engine | `engine.js` parses the log and works out what's due. `node engine.js status`, `add "watered basil"` and `check` work from the terminal, and the dashboard calls the same functions |
+| Dashboard | `Garden Dashboard.md` shows what's due today (status), a watering heatmap (analysis), a "log watering" button (actions), and when the forecast last updated. Its code is `garden-dashboard.ts`, which the note loads |
+| Engine | `engine.ts` parses the log and works out what's due. Its `status`, `add "watered basil"` and `check` commands work from the terminal, and the dashboard calls the same functions |
 | Connector | A weather script pulls the forecast into a cache. The engine, not the script, decides to skip watering when rain is due |
 
 A day in the log looks like this:
@@ -116,7 +116,10 @@ Each project gets `<Vault>/Projects/<Project>/`. Open Claude in that folder, bec
 <Project>/
 ├── CLAUDE.md                the agent's briefing (rule 8)
 ├── <Project> Dashboard.md   the dashboard (rule 17)
-├── engine.js                the rules (rule 22)
+├── <project>-dashboard.ts   the dashboard's code, which the note loads (rule 44)
+├── engine.ts                the rules (rule 22)
+├── tsconfig.json            the type-check settings, extending one shared base (rule 44)
+├── test/                    the tests (rule 40)
 ├── <project>-config.json    settings and reference data you edit by hand
 ├── <project>.json           state the engine writes, if it keeps any
 ├── Log/
@@ -284,7 +287,7 @@ Several agent sessions can run at once, in different projects or in the same one
 
 #### 17. Every project has a dashboard: status, analysis, actions
 
-A dashboard is a note with a single `dataviewjs` block. It answers three questions:
+A dashboard is a note with a single `dataviewjs` block, a few lines that load the dashboard's code from a TypeScript module beside the note (rule 44). It answers three questions:
 
 - **Status:** where does this stand right now, and how fresh is that? Key numbers, what's due, what's running, when the data last updated.
 - **Analysis:** what's the trend? Charts, heatmaps, streaks, comparisons.
@@ -324,7 +327,7 @@ Dashboards redraw whenever the note opens or the data changes, so they have to b
 
 - Styling lives in `.obsidian/snippets/<project>-dashboard.css`, scoped to a `cssclasses` value in the note's frontmatter. It's the one project file outside the project folder, because Obsidian only loads snippets from there.
 - Colours come from theme variables, never hard-coded values, so dashboards follow the vault's theme.
-- The script builds one HTML string and escapes any text it inserts.
+- The dashboard's code builds one HTML string and escapes any text it inserts.
 - The design system is a note in the vault. A new dashboard or snippet updates it in the same change.
 
 **Why:** dashboards that look like one product are faster to read, and a design system nobody updates stops being one.
@@ -333,13 +336,13 @@ Dashboards redraw whenever the note opens or the data changes, so they have to b
 
 #### 22. A project's fixed rules live in one engine
 
-When a project has rules, like parsing, scoring, streaks or targets, they live in one `engine.js`. It is:
+When a project has rules, like parsing, scoring, streaks or targets, they live in one `engine.ts`. It is:
 
-- a command-line tool that you, the agent and scripts run (`node engine.js status`)
-- a module the dashboard loads with `require()`
+- a command-line tool that you, the agent and scripts run (`engine.ts status`, through the shared loader, rule 44)
+- a module the dashboard loads through the same loader
 - a library other projects call (rule 34)
 
-Nothing else parses the record or repeats a rule. If a copy can't be avoided, like on a phone page that can't load modules, mark it as a copy and point to the original. Keep the engine to one file with no dependencies, so it loads anywhere the vault does.
+Nothing else parses the record or repeats a rule. If a copy can't be avoided, like on a phone page that can't load modules, mark it as a copy and point to the original. Keep the engine to one file with no dependencies beyond the loader, so it loads anywhere the vault does.
 
 **Why:** a second parser drifts, and then the agent and the dashboard disagree about the same day.
 
@@ -542,6 +545,17 @@ The home index, briefings, design system and contracts are part of the system. A
 - Use a folder name no project uses for its own data. A plain `Inbox/` is often already an import folder, and the import would swallow the message.
 
 **Why:** the project that owns the work makes the change, with its own briefing and tests loaded, and nothing private crosses between repos on the way.
+
+#### 44. All code is TypeScript, run through one shared loader
+
+- Engines, dashboards, scripts and tests are TypeScript. Nothing new is written in JavaScript, and older JavaScript moves over project by project.
+- One loader, kept in one place in the vault, lets Node and Obsidian `require()` a `.ts` file. It compiles each file with the TypeScript compiler when it loads and caches the output by the file's content, so only a changed file pays for compiling. A command runs as `node -r <loader> engine.ts status`; a dashboard note's block only loads its module through the loader.
+- The loader only compiles. Each project's check type-checks its code against one shared base config, then runs the tests (rule 40).
+- Load another project's code without an extension (`require("../Other/engine")`). The loader finds the `.ts` file, or the `.js` file of a project that hasn't moved yet, so projects can move in any order (rule 34).
+- Code that can't load a module, like a page in a phone's browser, is bundled from TypeScript into the one file it loads, and that file is build output, not source.
+- Starting a process through the loader costs a little time. That's fine for commands, hooks and dashboards, but not for something run on every keystroke.
+
+**Why:** types catch a caller that no longer matches the engine before the merge, not on the next redraw, and one loader means no build step in each project and one place to fix.
 
 ## Keeping this repo free of personal data
 

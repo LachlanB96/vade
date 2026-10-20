@@ -31,6 +31,9 @@ jobs:
           tar -xzf "$tarball" -C bin gitleaks
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
+      - name: Test the leak check (made-up lists, no secrets)
+        run: bash scripts/test-leak-check.sh
+
       - name: Check every commit for secrets and personal data
         env:
           VADE_BLOCKLIST: ${{ secrets.VADE_BLOCKLIST }}
