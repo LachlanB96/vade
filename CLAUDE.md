@@ -4,7 +4,13 @@ Guidance for Claude Code in this repo.
 
 ## What this is
 
-A **public** GitHub repo that documents VADE (Vault, Agents, Dashboards, Engines, plus connectors), a method for running personal projects with an AI agent. There is nothing to build.
+A **public** GitHub repo that documents VADE (Vault, Agents, Dashboards, Engines, plus connectors), a method for running personal projects with an AI agent. There is nothing to build: the only code is the leak check in `scripts/`.
+
+**Check:** `bash scripts/test-leak-check.sh`
+
+It runs `leak-check.sh` in throwaway repos against a made-up blocklist and a stand-in gitleaks, so it never reads the real lists. CI runs it too, before the real check.
+
+**Actions:** no dashboard yet; the work here is editing `README.md` and this file, and the leak check runs from the git hooks (`bash scripts/leak-check.sh --all` checks the whole history by hand). This repo is public: push only when the owner asks.
 
 `README.md` is the whole method, in this order: what VADE is, why, the model (what each part does and never does), six foundations, a made-up example project, then numbered rules grouped by part. The foundations are the method. The rules are one way to apply them with Obsidian and Claude Code.
 
@@ -31,7 +37,7 @@ If a real project inspired a rule, describe the pattern, not the project.
 - Each clone needs `git config core.hooksPath .githooks`.
 - Commit with a public identity (the GitHub noreply email) set in this repo's local git config. The pre-commit hook blocks a personal one.
 - If that noreply identity contains a blocklisted string, list the exact `Name <email>` in `~/.config/vade/allowed-identities.txt` locally and the `VADE_ALLOWED_IDENTITIES` secret in CI. It exempts commit authors and committers only. Never add anything else to it to get past a failed check, and never copy its entries into this repo.
-- When the hooks and script are first added, mark them executable so they run on Linux and macOS: `git add --chmod=+x .githooks/* scripts/leak-check.sh`.
+- When the hooks and script are first added, mark them executable so they run on Linux and macOS: `git add --chmod=+x .githooks/* scripts/*.sh`.
 
 ## Writing
 
