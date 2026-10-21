@@ -8,7 +8,7 @@ A **public** GitHub repo that documents VADE (Vault, Agents, Dashboards, Engines
 
 **Check:** `bash scripts/test-leak-check.sh`
 
-It runs `leak-check.sh` in throwaway repos against a made-up blocklist and a stand-in gitleaks, so it never reads the real lists. CI runs it too, before the real check.
+It runs `leak-check.sh` in throwaway repos against a made-up blocklist and a stand-in gitleaks, so it never reads the real lists. CI runs it too, before gitleaks.
 
 **Actions:** no dashboard yet; the work here is editing `README.md` and this file, and the leak check runs from the git hooks (`bash scripts/leak-check.sh --all` checks the whole history by hand). This repo is public: push only when the owner asks.
 
@@ -30,13 +30,13 @@ If a real project inspired a rule, describe the pattern, not the project.
 
 ## Leak check
 
-`scripts/leak-check.sh` runs from the hooks in `.githooks/` (pre-commit, commit-msg, pre-push) and from `.github/workflows/leak-check.yml`. It runs gitleaks, and matches a private blocklist against file contents, file paths, commit messages and author details.
+`scripts/leak-check.sh` runs from the hooks in `.githooks/` (pre-commit, commit-msg, pre-push). It runs gitleaks, and matches a private blocklist against file contents, file paths, commit messages and author details. GitHub's check (`.github/workflows/leak-check.yml`) runs gitleaks alone.
 
-- The blocklist is `~/.config/vade/blocklist.txt` locally and the `VADE_BLOCKLIST` secret in CI. Never copy its entries into this repo or into CI output.
+- The blocklist is `~/.config/vade/blocklist.txt` and never leaves this PC (the owner's rule, 2026-10-21): it's personal data itself. It isn't in this repo and isn't a GitHub secret; the repo had both lists as Actions secrets for a few minutes on 2026-10-21 and they were deleted. Never copy its entries anywhere, CI included.
 - Never skip the hooks with `--no-verify`. If the check fails, remove the data.
 - Each clone needs `git config core.hooksPath .githooks`.
 - Commit with a public identity (the GitHub noreply email) set in this repo's local git config. The pre-commit hook blocks a personal one.
-- If that noreply identity contains a blocklisted string, list the exact `Name <email>` in `~/.config/vade/allowed-identities.txt` locally and the `VADE_ALLOWED_IDENTITIES` secret in CI. It exempts commit authors and committers only. Never add anything else to it to get past a failed check, and never copy its entries into this repo.
+- If that noreply identity contains a blocklisted string, list the exact `Name <email>` in `~/.config/vade/allowed-identities.txt`, which stays on this PC too. It exempts commit authors and committers only. Never add anything else to it to get past a failed check, and never copy its entries into this repo.
 - When the hooks and script are first added, mark them executable so they run on Linux and macOS: `git add --chmod=+x .githooks/* scripts/*.sh`.
 
 ## Writing
