@@ -562,14 +562,15 @@ The home index, briefings, design system and contracts are part of the system. A
 This repo is public, so every commit and push runs a leak check:
 
 - [gitleaks](https://github.com/gitleaks/gitleaks) looks for secrets.
-- A private blocklist of names, emails, usernames and machine names is matched against file contents, file paths, commit messages and commit author details. The blocklist is never stored in the repo.
+- A private blocklist of names, emails, usernames and machine names is matched against file contents, file paths, commit messages and commit author details.
 - A GitHub noreply email contains your username, which may be on the blocklist. A private list of allowed identities lets that exact commit author through. It never exempts file contents, paths or messages.
+
+The blocklist is personal data itself, so it never leaves your machine: it isn't in the repo, and it isn't a repository secret. The git hooks run the whole check, blocklist included, before anything reaches GitHub. GitHub's own check runs gitleaks alone, as a second line for secrets.
 
 To use it in a clone:
 
 1. Install gitleaks.
 2. Run `git config core.hooksPath .githooks`.
 3. Create `~/.config/vade/blocklist.txt` with one personal string per line.
-4. Add the same list as a repository secret named `VADE_BLOCKLIST`, so the GitHub Actions check can use it.
-5. Set the repo's `user.name` and `user.email` to your GitHub username and noreply email, listed at <https://github.com/settings/emails>.
-6. If the check blocks that identity, add it as `Name <email>` to `~/.config/vade/allowed-identities.txt`, and as a repository secret named `VADE_ALLOWED_IDENTITIES`.
+4. Set the repo's `user.name` and `user.email` to your GitHub username and noreply email, listed at <https://github.com/settings/emails>.
+5. If the check blocks that identity, add it as `Name <email>` to `~/.config/vade/allowed-identities.txt`.

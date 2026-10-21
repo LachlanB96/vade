@@ -6,23 +6,21 @@
 # Usage:
 #   leak-check.sh --staged       the next commit's files, paths and author (pre-commit hook)
 #   leak-check.sh --msg <file>   a commit message (commit-msg hook)
-#   leak-check.sh --all          every commit's files, paths, message and author (pre-push hook, CI)
+#   leak-check.sh --all          every commit's files, paths, message and author (pre-push hook)
 #
 # The blocklist has one string per line, matched case-insensitively. Blank lines and lines
-# starting with # are ignored. It is never stored in this repo:
-#   locally: $VADE_BLOCKLIST_FILE, or ~/.config/vade/blocklist.txt
-#   in CI:   the VADE_BLOCKLIST repository secret, written to a temp file by the workflow
+# starting with # are ignored. It's personal data itself, so it never leaves the machine: not in
+# this repo, not a CI secret. CI runs gitleaks alone. Its file: $VADE_BLOCKLIST_FILE, or
+# ~/.config/vade/blocklist.txt
 #
 # A public commit identity can contain a blocklisted string, like the username in a GitHub
 # noreply email. The optional allowed identities list names those identities, one
 # "Name <email>" per line, each matching a whole identity case-insensitively. It exempts commit
 # authors and committers only, never file contents, paths or messages. Same format rules, and
-# also never stored in this repo:
-#   locally: $VADE_ALLOWED_IDENTITIES_FILE, or ~/.config/vade/allowed-identities.txt
-#   in CI:   the VADE_ALLOWED_IDENTITIES repository secret
+# it stays on the machine too: $VADE_ALLOWED_IDENTITIES_FILE, or ~/.config/vade/allowed-identities.txt
 #
-# Output names commits and files but never the matched text, because CI logs on a public
-# repo are public too. Any error while matching counts as a match, so the check fails closed.
+# Output names commits and files but never the matched text, so it's safe to paste anywhere.
+# Any error while matching counts as a match, so the check fails closed.
 
 set -eu
 
