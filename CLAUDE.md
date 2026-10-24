@@ -8,13 +8,13 @@ A **public** GitHub repo that documents VADE (Vault, Agents, Dashboards, Engines
 
 **Check:** `bash scripts/test-leak-check.sh`
 
-It runs `leak-check.sh` in throwaway repos against a made-up blocklist and a stand-in gitleaks, so it never reads the real lists. CI runs it too, before gitleaks.
+It runs `leak-check.sh` and the hooks in throwaway repos against a made-up blocklist, a stand-in gitleaks and made-up git configs, so it never reads the real lists or runs the machine's own hooks. CI runs it too, before gitleaks.
 
 **Actions:** no dashboard yet; the work here is editing `README.md` and this file, and the leak check runs from the git hooks (`bash scripts/leak-check.sh --all` checks the whole history by hand). This repo is public: push only when the owner asks.
 
-`README.md` is the whole method, in this order: what VADE is, why, the model (what each part does and never does), six foundations, a made-up example project, then numbered rules grouped by part. The foundations are the method. The rules are one way to apply them with Obsidian and Claude Code.
+`README.md` is the whole method, in this order: what VADE is, why, the model (what each part does and never does), six foundations, a made-up example project, then numbered rules grouped by part. The foundations are the method. The rules are one way to apply them, with a folder of plain files, a dashboard server on the owner's machine, and Claude Code. Obsidian was the vault's app until the owner retired it (2026-10-23), and the projects then left its vault for a folder of their own (2026-10-24): the README no longer names it, and shouldn't again.
 
-This folder sits inside the owner's real vault, next to their real projects. You can read those projects to understand a pattern. Never copy anything from them into this repo.
+This folder sits among the owner's real projects. You can read those projects to understand a pattern. Never copy anything from them into this repo.
 
 ## Never commit personal data
 
