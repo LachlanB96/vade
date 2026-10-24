@@ -1,6 +1,6 @@
 # VADE
 
-VADE is a method for running personal projects together with an AI agent. Every project lives in one Obsidian vault, and its work is split between four parts:
+VADE is a method for running personal projects together with an AI agent. Every project lives in one folder of plain files and git repos, the vault, and its work is split between four parts:
 
 - **Vault:** the record. Plain files you can read, one folder per project.
 - **Agents:** judgement. Claude, briefed for each project, with skills for its routines.
@@ -75,9 +75,9 @@ A made-up project that uses every part:
 
 | Part | In the garden project |
 |---|---|
-| Vault | `Projects/Garden/` holds `garden-config.json` (each plant and how often it needs water), `Log/2026-09.md` (one line per watering) and `Knowledge/` (what worked, what didn't) |
+| Vault | `<Vault>/Garden/` holds `garden-config.json` (each plant and how often it needs water), `Log/2026-09.md` (one line per watering) and `Knowledge/` (what worked, what didn't) |
 | Agent | `CLAUDE.md` makes Claude the garden's assistant, says to read `Knowledge/Beds.md` first, and describes a weekly planning routine. A `plan-week` skill asks what's coming up and proposes a schedule |
-| Dashboard | `Garden Dashboard.md` shows what's due today (status), a watering heatmap (analysis), a "log watering" button (actions), and when the forecast last updated. Its code is `garden-dashboard.ts`, which the note loads |
+| Dashboard | `garden-dashboard.ts` is the garden's page on the dashboard server. It shows what's due today (status), a watering heatmap (analysis), a "log watering" button (actions), and when the forecast last updated. `garden-dashboard.css` beside it is its styling |
 | Engine | `engine.ts` parses the log and works out what's due. Its `status`, `add "watered basil"` and `check` commands work from the terminal, and the dashboard calls the same functions |
 | Connector | A weather script pulls the forecast into a cache. The engine, not the script, decides to skip watering when rain is due |
 
@@ -91,15 +91,17 @@ A day in the log looks like this:
 
 ## The rules
 
-The foundations are the method. The rules below are one way to apply them, with Obsidian and Claude Code. They're numbered so other files can refer to them.
+The foundations are the method. The rules below are one way to apply them, with a folder of plain files, a small dashboard server on your own machine, and Claude Code. They're numbered so other files can refer to them.
 
 ### Vault: the record
 
 #### 1. One home for all projects
 
-All projects live under one folder in one Obsidian vault, for example `<Vault>/Projects/`. There is one place to look for anything.
+All projects live in one folder of their own in your home folder: the vault, written `<Vault>` below. Each project is a folder directly inside it. There is one place to look for anything.
 
-The home has two indexes:
+The vault is a plain folder, not an app's. Any editor opens its files, the agent reads them as files, and the dashboard server shows its notes as pages (rule 17).
+
+The top of the vault is the home. It holds what every project shares, like the code loader (rule 44) and shared definitions (rule 27), and two indexes:
 
 - a **Projects dashboard** that lists every project with its status, and ranks what needs attention by urgency, time since it was last touched, and work left
 - a **`CLAUDE.md`** that maps each topic to its project folder
@@ -110,13 +112,13 @@ A Claude session opened in the home only routes. It tells you which folder to op
 
 #### 2. One folder per project, and the folder is the context
 
-Each project gets `<Vault>/Projects/<Project>/`. Open Claude in that folder, because its briefing, skills, tools, permissions and memory all load from where it starts.
+Each project gets `<Vault>/<Project>/`. Open Claude in that folder, because its briefing, skills, tools, permissions and memory all load from where it starts.
 
 ```text
 <Project>/
 ├── CLAUDE.md                the agent's briefing (rule 8)
-├── <Project> Dashboard.md   the dashboard (rule 17)
-├── <project>-dashboard.ts   the dashboard's code, which the note loads (rule 44)
+├── <project>-dashboard.ts   the dashboard, a page on the dashboard server (rule 17)
+├── <project>-dashboard.css  the dashboard's styling (rule 21)
 ├── engine.ts                the rules (rule 22)
 ├── tsconfig.json            the type-check settings, extending one shared base (rule 44)
 ├── test/                    the tests (rule 40)
@@ -125,23 +127,24 @@ Each project gets `<Vault>/Projects/<Project>/`. Open Claude in that folder, bec
 ├── Log/
 │   └── YYYY-MM.md           the record, one file per month
 ├── Knowledge/               what's been learned (rule 11)
+├── code/<repo>/             a code base with a life of its own, as its own repo (rule 38)
 ├── .claude/skills/          the project's skills (rule 10)
 ├── .claude/memory/          the agent's memory for this project (rule 38)
 ├── .gitignore               what the repo leaves out (rule 38)
 └── .mcp.json                the project's MCP servers (rule 29)
 ```
 
-Only the folder, its repo and a dashboard are required. The rest is added when it's needed (rule 36). A project's folder stays its entry point even when some of its files live elsewhere (rule 7).
+Only the folder, its repo and a dashboard are required. The rest is added when it's needed (rule 36). The folder holds everything the project owns, its code bases included. Only machine state and credentials live outside it (rule 7).
 
 **Why:** an agent started in the wrong folder has no rules, no memory and the wrong tools.
 
 #### 3. Plain text is the record
 
-Records, config, notes and briefings are Markdown and JSON. You can read and type them. Obsidian links, searches and renders them. The agent reads them as ordinary files.
+Records, config, notes and briefings are Markdown and JSON. You can read and type them, any editor opens them, and the agent reads them as ordinary files.
 
 - Keep formats simple enough to type on a phone, like a `## YYYY-MM-DD` heading with one line per entry.
 - Once a format is in use, change it only in ways that keep old lines readable.
-- Dashboards need the Dataview community plugin with JavaScript queries turned on.
+- No app owns the files. Whatever shows them, like the dashboard server's note pages, only reads them, so the vault never depends on one app's plugins or settings.
 
 **Why:** plain files outlive any app, and both you and the agent can fix them.
 
@@ -180,14 +183,14 @@ For each file, ask: would another machine, or you in a year, need this?
 | Files | Where they go |
 |---|---|
 | Records, config, notes, and synced data you want on every device | The project folder |
+| A code base with a life of its own: a fork, a public repo, a deploy clone, someone else's code you're auditing | `<Project>/code/<repo>/`, its own repo, which the project's `.gitignore` leaves out with `/code/` (rule 38) |
+| Build output, dependencies (`node_modules/`, `target/`, `__pycache__/`), large downloads | The project folder, ignored by git and left out of the backup by the backup's excludes (rule 41) |
 | Render caches, timers, process state, and UI preferences for this machine | Local app data, for example `%LOCALAPPDATA%/VADE/` |
 | OAuth tokens and API keys | Encrypted (on Windows, with DPAPI) in a user config folder, like `~/.config/<project>/` |
-| Build output, dependencies (`node_modules/`, `target/`, `__pycache__/`) | The project folder, listed under **Settings → Files and links → Excluded files** |
-| Anything measured in gigabytes, or with its own heavy tooling | Outside the vault, linked from the project folder |
 
 - Never put a key in a script, hook or note, even outside the vault. Backups and sync copy those too.
-- Don't hard-code user paths. Use `~` and environment variables like `%LOCALAPPDATA%`.
-- Excluding a folder only hides it from Obsidian. Vault sync and backups still copy it. If that's a problem, move it out.
+- Don't hard-code user paths. Use `~` and environment variables like `%LOCALAPPDATA%`. A check over every project lists the code and config that still name a folder by a fixed path, because a move or a rename breaks them (rules 37 and 45).
+- Size alone never moves a folder out of its project. The backup's excludes keep what can be rebuilt out of the copy, and tools that walk the notes, like the home dashboard's list of recent notes, skip `code/`, dependencies and build output.
 
 **Why:** a vault full of machine state is slow, noisy and unsafe to sync or share.
 
@@ -287,32 +290,39 @@ Several agent sessions can run at once, in different projects or in the same one
 
 #### 17. Every project has a dashboard: status, analysis, actions
 
-A dashboard is a note with a single `dataviewjs` block, a few lines that load the dashboard's code from a TypeScript module beside the note (rule 44). It answers three questions:
+A dashboard is a page on one dashboard server that runs on your own machine. You view it in a browser on the computer, and on your phone over the home network once the phone is paired. Each dashboard is a TypeScript module in its own project (rule 44) that exports `page(ctx)` and returns the page's HTML, with its stylesheet beside it (rule 21). One config file lists every dashboard the server serves.
+
+A dashboard answers three questions:
 
 - **Status:** where does this stand right now, and how fresh is that? Key numbers, what's due, what's running, when the data last updated.
 - **Analysis:** what's the trend? Charts, heatmaps, streaks, comparisons.
 - **Actions:** what can I do from here? Buttons that log an entry, run a sync or open the right note.
 
-The home dashboard links to every project dashboard, and its cards show each project's status.
+The home dashboard links to every project dashboard, and its cards show each project's status. A note a dashboard links to opens as a read-only page on the same server: its Markdown drawn, its links followed, any raw HTML shown as text. It serves only the vault's own notes, never a dot folder (where the agent's memory lives) or a project's `code/`.
+
+The server's command line draws any dashboard as text and presses any of its buttons, so the agent sees what you see and can do what you can (rule 42).
+
+**Why:** a page in a browser works on the phone as well as the computer, and a dashboard that's an ordinary module can be loaded, tested and pressed from the command line like any other code.
 
 #### 18. Drawing never writes. Actions go through the engine or a backend
 
 - Drawing the dashboard only reads. It never creates vault files, never writes notes and never calls outside services. It may write its own cache in local app data.
-- A button that changes data calls an engine function (rule 24) or runs the project's backend script (rule 31).
+- A button is a named action that the page asks the server to run. One that changes data calls an engine function (rule 24) or runs the project's backend script (rule 31).
+- Work that takes a while is a job in the dashboard's own queue. The action starts it and returns at once. A second press, from another tab or the phone, joins the running job instead of starting a copy. One job runs at a time per dashboard, and every open page shows it running and how it ended.
 - A dashboard never repeats a rule. It shows what the engine computes.
 
-**Why:** otherwise a redraw can corrupt files, and the dashboard and the agent drift apart.
+**Why:** otherwise a redraw can corrupt files, a double press runs the same sync twice, and the dashboard and the agent drift apart.
 
 #### 19. Dashboards are cheap and disposable
 
-Dashboards redraw whenever the note opens or the data changes, so they have to be cheap:
+Dashboards redraw whenever a page opens or the data changes, so they have to be cheap:
 
 - Draw from a cache first, then refresh in the background.
 - For files that grow, check size and modified time before reading, and parse only the new part.
-- After every wait, check that the note is still open. A timer is one global handle that stops itself once the note closes.
-- Watch for changes by comparing file sizes and modified times, and pause while you're typing, so a refresh never wipes your input.
+- Timers and watchers belong to the server, not the page. It runs them while a page is open, or on a schedule with no page open, and stops them when the module changes or the server ends.
+- The server loads each module fresh, so a saved change shows on the next draw with no restart. It tells open pages to redraw when a watched file changes, and a redraw keeps what you're typing, so a refresh never wipes your input.
 
-**Why:** Obsidian re-runs dashboards all the time. Without this, timers pile up and a slow folder freezes the app.
+**Why:** the server draws a page on every open and every change. Without this, a slow folder holds up every page, and timers pile up with every edit.
 
 #### 20. Dashboards show freshness, liveness and errors
 
@@ -325,10 +335,11 @@ Dashboards redraw whenever the note opens or the data changes, so they have to b
 
 #### 21. All dashboards share one design system
 
-- Styling lives in `.obsidian/snippets/<project>-dashboard.css`, scoped to a `cssclasses` value in the note's frontmatter. It's the one project file outside the project folder, because Obsidian only loads snippets from there.
-- Colours come from theme variables, never hard-coded values, so dashboards follow the vault's theme.
+- Styling lives in `<project>-dashboard.css` beside the dashboard's module, scoped to the dashboard's own class, which the server puts on the page.
+- Colours and fonts come from variables in one theme file the server owns, never hard-coded values, so every dashboard follows it, dark and light.
+- The page around every dashboard, its title, messages and error box, is the server's, drawn the same way for all of them.
 - The dashboard's code builds one HTML string and escapes any text it inserts.
-- The design system is a note in the vault. A new dashboard or snippet updates it in the same change.
+- The design system is a note in the vault. A new dashboard or stylesheet updates it in the same change.
 
 **Why:** dashboards that look like one product are faster to read, and a design system nobody updates stops being one.
 
@@ -339,10 +350,10 @@ Dashboards redraw whenever the note opens or the data changes, so they have to b
 When a project has rules, like parsing, scoring, streaks or targets, they live in one `engine.ts`. It is:
 
 - a command-line tool that you, the agent and scripts run (`engine.ts status`, through the shared loader, rule 44)
-- a module the dashboard loads through the same loader
+- a module the dashboard imports
 - a library other projects call (rule 34)
 
-Nothing else parses the record or repeats a rule. If a copy can't be avoided, like on a phone page that can't load modules, mark it as a copy and point to the original. Keep the engine to one file with no dependencies beyond the loader, so it loads anywhere the vault does.
+Nothing else parses the record or repeats a rule. If a copy can't be avoided, like on a phone page that can't load modules, mark it as a copy and point to the original. Keep the engine to one file with no dependencies beyond the loader, so it loads everywhere it runs: the command line and the dashboard server.
 
 **Why:** a second parser drifts, and then the agent and the dashboard disagree about the same day.
 
@@ -363,7 +374,7 @@ Commands that change data are verbs, like `add` and `undo`, and each accepts `--
 
 #### 24. The engine decides, the caller saves
 
-Engine functions that change data don't touch the disk. They take the current content and return the new content, or a refusal with a reason. The caller saves the result: the command line with the file system, the dashboard through Obsidian.
+Engine functions that change data don't touch the disk. They take the current content and return the new content, or a refusal with a reason. The caller saves the result: the command line, or the dashboard's action on the server.
 
 - Saving re-reads the file, applies the change, and writes atomically: to a temporary file, then renamed over the original.
 
@@ -489,13 +500,16 @@ A project doesn't start with every part. It gains each one when it earns it:
 
 The home index, briefings, design system and contracts are part of the system. A change to a pattern updates them in the same step. Date what you write, and delete what no longer holds.
 
+A check over every project tests each one against these rules: a briefing, a dashboard, a repo, a check that passes, a secret scan, an off-machine copy, no fixed paths (rule 7), no worktree left behind (rule 39). Each exception it allows is written down with its reason. The Projects dashboard shows the result, and a nightly run catches a project that another project's change broke.
+
 **Why:** an out-of-date map sends you, and the agent, to the wrong place with confidence.
 
 #### 38. Every project is a git repo
 
-- Each project folder is its own git repository. A project can have more than one when parts have separate lives, like a website that deploys on its own.
+- Each project folder is its own git repository. A project can have more than one when parts have separate lives, like a website that deploys on its own or a fork of someone else's code. Each of those sits in `<Project>/code/<repo>/`, a repo inside the project's folder that the project's `.gitignore` leaves out with `/code/`.
+- Two halves of one thing, like a game's design and its code, are one project and one repo.
 - The `.gitignore` leaves out what can be rebuilt: dependencies, build output, caches, logs.
-- The dashboard note, its stylesheet and the agent's memory for the project are in the repo. The memory folder the agent expects is a link to the project's `.claude/memory/`.
+- The dashboard's module, its stylesheet and the agent's memory for the project are in the repo. The memory folder the agent expects is a link to the project's `.claude/memory/`.
 - A pre-commit hook scans every commit for secrets and blocks it on a find. A real secret moves out of the repo (rule 7). Only a confirmed false positive is allowlisted.
 - Hooks every repo needs live in one shared folder that the global git config names. A repo that needs hooks of its own, like a public one with a stricter check, has them run the shared hook first: a repo's own hooks folder replaces the shared one, and nothing says so.
 - One setup script, driven by a list of every repo, creates and checks them all. A new project is one more line in the list.
@@ -505,10 +519,12 @@ The home index, briefings, design system and contracts are part of the system. A
 #### 39. Build on a branch, merge into main
 
 - Code changes are made on a feature branch and committed as each working step lands.
-- The project folder is what runs: dashboards, engines and scheduled jobs all load it. So it stays on `main`. Work that takes longer than one sitting goes in a worktree. Dashboard changes, which only Obsidian can preview, may branch in place, and the folder goes back to `main` once they're merged.
-- Merge with `--no-ff`, so one revert undoes a whole feature. Never rewrite history that's been pushed.
+- Every branch goes in a worktree of its own, however small the change, and the project folder never leaves `main`. The folder is what runs: dashboards, engines and scheduled jobs all load it. Several agent sessions also work in it at once, so a branch switched there takes all of them with it: their commits land on it and their builds build it (rule 15).
+- One command lands a branch, once its check has passed (rule 40). It makes a `--no-ff` merge from git's objects without touching any checkout, and moves `main` only if nothing moved it since it was read, merging again if something did. Then it brings the project folder forward, pushes where rule 41 says to, removes the worktree and deletes the branch. On a conflict, or uncommitted work in the way, it refuses and changes nothing.
+- A finished worktree doesn't stay behind, and the check over every project flags one that does (rule 37). Links inside a worktree are removed before it is, because deleting through a link empties the folder it points to.
+- One revert undoes a whole feature, because every merge is `--no-ff`. Never rewrite history that's been pushed.
 
-**Why:** `main` is always a state that worked, and any feature can be taken back in one step.
+**Why:** `main` is always a state that worked, any feature can be taken back in one step, and no session's merge lands on another session's branch.
 
 #### 40. Tests gate the merge
 
@@ -522,7 +538,7 @@ The home index, briefings, design system and contracts are part of the system. A
 
 - Each repo pushes to a private remote after every merge.
 - A project with sensitive data, like health or money, never gets a remote. An encrypted, versioned backup is its off-machine copy.
-- The same backup covers what isn't in any repo: agent transcripts, local app data, and whatever a repo leaves out.
+- The same backup covers what isn't in any repo: agent transcripts, local app data, and whatever a repo leaves out. Its own excludes skip what can be rebuilt, like dependencies, build output and clones of someone else's code.
 - A nightly job commits data changes on `main`, pushes, runs the backup and writes a status file. A dashboard shows each repo's branch, its uncommitted and unpushed work, and when the backup last ran (rule 20).
 - Agent memory and transcripts never go anywhere public.
 - Each briefing says where anything vital lives outside its repo.
@@ -531,7 +547,7 @@ The home index, briefings, design system and contracts are part of the system. A
 
 #### 42. The agent can do anything you can
 
-- Every action you can take in a project, the agent can take too, through an MCP server or the engine's command line (rule 23). If you can click it, place it or send it, there's a command for it.
+- Every action you can take in a project, the agent can take too, through an MCP server, the engine's command line (rule 23) or the dashboard server's (rule 17). If you can click it, place it or send it, there's a command for it.
 - Rule 12 still holds. The agent does the steps, and anything irreversible or outward waits for your OK.
 
 **Why:** an action only you can take is one the agent can never test, repeat or do for you while you're away.
@@ -550,13 +566,27 @@ The home index, briefings, design system and contracts are part of the system. A
 #### 44. All code is TypeScript, run through one shared loader
 
 - Engines, dashboards, scripts and tests are TypeScript. Nothing new is written in JavaScript, and older JavaScript moves over project by project.
-- One loader, kept in one place in the vault, lets Node and Obsidian `require()` a `.ts` file. It compiles each file with the TypeScript compiler when it loads and caches the output by the file's content, so only a changed file pays for compiling. A command runs as `node -r <loader> engine.ts status`; a dashboard note's block only loads its module through the loader.
+- One loader, kept in one place in the vault, lets Node `require()` a `.ts` file. It compiles each file with the TypeScript compiler when it loads and caches the output by the file's content, so only a changed file pays for compiling. A command runs as `node -r <loader> engine.ts status`. The dashboard server runs on a runtime that loads TypeScript itself, and imports the same modules.
 - The loader only compiles. Each project's check type-checks its code against one shared base config, then runs the tests (rule 40).
 - Load another project's code without an extension (`require("../Other/engine")`). The loader finds the `.ts` file, or the `.js` file of a project that hasn't moved yet, so projects can move in any order (rule 34).
 - Code that can't load a module, like a page in a phone's browser, is bundled from TypeScript into the one file it loads, and that file is build output, not source.
-- Starting a process through the loader costs a little time. That's fine for commands, hooks and dashboards, but not for something run on every keystroke.
+- Starting a process through the loader costs a little time. That's fine for commands and hooks, but not for something run on every keystroke.
 
 **Why:** types catch a caller that no longer matches the engine before the merge, not on the next redraw, and one loader means no build step in each project and one place to fix.
+
+#### 45. Move folders with a script you can undo
+
+Sometimes the layout itself changes: two projects become one, a code base moves into its project, the vault moves to a new place. A move touches every project at once, so it's rehearsed first, and it can stop or go back at any point.
+
+- One script does the move, driven by a layout file that lists every move in order.
+- A dry run comes first. It lists every move, link and config change, and everything in the way.
+- It finds what holds a folder open by what each process really has open: its working folder, its open files, the programs and libraries it loaded. Its command line alone misses most of them. While one is still open, the real run refuses before it changes anything.
+- Moves are renames on the same disk. A link is left at every old place, so fixed paths keep working until they're found and fixed.
+- It rewrites what names the folders from outside them: settings, git config, loaders, tool configs, scheduled tasks and shortcuts, and the agent's own per-folder state, which is kept by path. It repairs worktrees, which record where they are.
+- It writes a journal as it goes, with a copy of each file it rewrites, so a failure part way puts back what it did, and an undo puts back a finished run.
+- Afterwards, the check over every project (rule 37) counts the fixed paths that still name an old place (rule 7). Each link goes once nothing names it.
+
+**Why:** half a move is worse than none. A rehearsal, a refusal before any change and a journal make a change to every project one step you can take back.
 
 ## Keeping this repo free of personal data
 
