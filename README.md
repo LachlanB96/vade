@@ -221,12 +221,14 @@ The agent changes records by running engine commands, not by editing record file
 #### 10. Routines are written down
 
 - A routine that belongs to one project lives in its briefing (rule 8).
-- A module of work that repeats, especially across projects, becomes a skill: a `SKILL.md` in `<Project>/.claude/skills/<skill>/` for one project, or in `~/.claude/skills/<skill>/` for several.
+- A module of work that repeats, especially across projects, becomes a skill: a `SKILL.md` in `<Project>/.claude/skills/<skill>/`. It loads only in that project.
+- A skill several projects use still lives in the repo of the project that owns its work, so it has an owner, a history and a backup (rules 4 and 38). The agent's global skills folder holds only a link to it, `~/.claude/skills/<skill>/`, and you change it in its repo, on a branch (rule 39). A shared agent definition works the same way, in a folder of its own, because a link can only point at a folder.
+- The setup script makes those links from the list of repos (rule 38), and the check over every project flags one that's missing or isn't a link (rule 37). A real folder found where a link should go is moved aside, never deleted, and never left where it would load as a second copy. A skill that another tool installs and updates stays that tool's.
 - A skill has: a description full of the phrases that should trigger it, saying whether it runs on its own or only when asked for by name; why it exists; a check for the trap it's known to fall into; ordered steps; hard rules; and a last step that writes the results back.
 - A skill used by several projects writes its results into the project that owns them, where that project's dashboard can read them.
 - When a skill goes wrong, the lesson goes into the step where that decision is made, with the reason.
 
-**Why:** a routine kept in your head or an old chat is done differently every time.
+**Why:** a routine kept in your head or an old chat is done differently every time, and a skill kept only in the agent's global folder has no owner and no history.
 
 #### 11. What's learned is written into the project
 
@@ -587,6 +589,15 @@ Sometimes the layout itself changes: two projects become one, a code base moves 
 - Afterwards, the check over every project (rule 37) counts the fixed paths that still name an old place (rule 7). Each link goes once nothing names it.
 
 **Why:** half a move is worse than none. A rehearsal, a refusal before any change and a journal make a change to every project one step you can take back.
+
+#### 46. Files keep the bytes their tools wrote
+
+- git doesn't convert line endings on checkout or commit (`core.autocrlf` is off). A file checked out with other endings than its tool wrote gets a stray `\r` on every line that a parser splits on `\n`.
+- A repo that needs one ending says so in its `.gitattributes`, like LF for shell scripts and hooks, which fail in bash with CRLF.
+- An edit keeps a file's endings. Some tools rewrite the whole file in their own, like `sed -i` in some Windows shells, so a one-line change becomes a change to every line. Edit such files with a tool that keeps them, and check a commit's diff stat before merging: a small change that touches every line is an ending change.
+- Before claiming a line-ending problem, count the carriage-return bytes themselves (`tr -cd '\r' <file | wc -c`). A pattern search for `\r` miscounts them in some shells.
+
+**Why:** a stray `\r` breaks parsers without an error, and a whole-file diff hides the real change from review and from `git blame`.
 
 ## Keeping this repo free of personal data
 
