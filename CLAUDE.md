@@ -32,6 +32,8 @@ If a real project inspired a rule, describe the pattern, not the project.
 
 `scripts/leak-check.sh` runs from the hooks in `.githooks/` (pre-commit, commit-msg, pre-push). It runs gitleaks, and matches a private blocklist against file contents, file paths, commit messages and author details. GitHub's check (`.github/workflows/leak-check.yml`) runs gitleaks alone.
 
+Each hook first runs the machine's own hook of the same name (`scripts/machine-hook.sh`): the hooks folder `core.hooksPath` names in the global git config, or else the system one. This repo's own `core.hooksPath` would otherwise switch those off without a word. On the owner's machine they're the hooks every personal repo runs: a secret scan, a guard against rewriting or deleting `main`, and a check that keeps a private list of names out of every repo that leaves the machine (the owner asked for it on 2026-10-22). The hooks find that folder through git config, so no path to it is ever written here; never add one.
+
 - The blocklist is `~/.config/vade/blocklist.txt` and never leaves this PC (the owner's rule, 2026-10-21): it's personal data itself. It isn't in this repo and isn't a GitHub secret; the repo had both lists as Actions secrets for a few minutes on 2026-10-21 and they were deleted. Never copy its entries anywhere, CI included.
 - Never skip the hooks with `--no-verify`. If the check fails, remove the data.
 - Each clone needs `git config core.hooksPath .githooks`.

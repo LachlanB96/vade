@@ -1,2 +1,5 @@
 #!/usr/bin/env bash
-exec bash "$(git rev-parse --show-toplevel)/scripts/leak-check.sh" --msg "$1"
+# The machine's own commit-msg hook first (scripts/machine-hook.sh), then this repo's leak check.
+top="$(git rev-parse --show-toplevel)"
+bash "$top/scripts/machine-hook.sh" commit-msg "$@" || exit 1
+exec bash "$top/scripts/leak-check.sh" --msg "$1"
