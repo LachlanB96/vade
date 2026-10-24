@@ -107,6 +107,14 @@ expect "a blocklisted path fails without printing the path" 1 "path contains a b
 git -C "$d" rm -q --cached "Zanzibar Quill/x.md"
 rm -r "$d/Zanzibar Quill"
 
+mkdir -p "$d/private"
+echo '{"type":"add","id":"F1","text":"made up"}' >"$d/private/feedback.jsonl"
+git -C "$d" add -f private/feedback.jsonl
+run "$d" --staged
+expect "a file under private/ fails even when added by force" 1 "under private/"
+git -C "$d" rm -q --cached private/feedback.jsonl
+rm -r "$d/private"
+
 GIT_AUTHOR_EMAIL="quill@example.org" run "$d" --staged
 expect "a personal author fails" 1 "author or committer"
 printf 'OCTO <Quill@example.org>\n' >"$VADE_ALLOWED_IDENTITIES_FILE"
@@ -158,6 +166,14 @@ git -C "$h" add a.md
 git -C "$h" commit -q -m "for Zanzibar Quill"
 run "$h" --all
 expect "a personal commit message in history fails" 1 "message contains a blocklisted string"
+
+h="$(repo)"
+mkdir -p "$h/private"
+echo "made up" >"$h/private/feedback.jsonl"
+git -C "$h" add -f private/feedback.jsonl
+git -C "$h" commit -q -m "first"
+run "$h" --all
+expect "a file under private/ anywhere in history fails" 1 "files under private/"
 
 # The hooks. A repo with this repo's .githooks and scripts, and a machine hooks folder whose
 # stand-in hooks log their name, arguments and stdin, and exit with $MACHINE_EXIT.

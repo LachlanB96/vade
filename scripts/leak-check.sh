@@ -19,6 +19,9 @@
 # authors and committers only, never file contents, paths or messages. Same format rules, and
 # it stays on the machine too: $VADE_ALLOWED_IDENTITIES_FILE, or ~/.config/vade/allowed-identities.txt
 #
+# Nothing under private/ ever goes in: it's the dashboard's feedback log, which names real projects. The
+# .gitignore leaves it out; this refuses it even when it's added by force.
+#
 # Output names commits and files but never the matched text, so it's safe to paste anywhere.
 # Any error while matching counts as a match, so the check fails closed.
 
@@ -142,6 +145,9 @@ check_staged() {
   if git ls-files --cached | is_personal; then
     fail "a staged file path contains a blocklisted string."
   fi
+  if git ls-files --cached | grep -q '^private/'; then
+    fail "files under private/ are staged. It holds the feedback log, which never goes in this repo: git rm --cached -r private"
+  fi
   check_identity
   run_gitleaks git --pre-commit --staged
 }
@@ -166,6 +172,9 @@ check_all() {
     fi
     if git ls-tree -r --name-only "$rev" | is_personal; then
       fail "commit $short: a file path contains a blocklisted string."
+    fi
+    if git ls-tree -r --name-only "$rev" | grep -q '^private/'; then
+      fail "commit $short: it has files under private/, the feedback log, which never goes in this repo."
     fi
     status=0
     hits="$(git grep -I -l -i -F -f "$patterns" "$rev" --)" || status=$?
