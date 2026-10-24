@@ -8,3 +8,6 @@ desktop.ini
 
 # Claude Code's local state: worktrees, settings, memory. Memory is never published.
 .claude/
+
+# The dashboard's feedback log: it names real projects, so it never leaves this machine (the leak check refuses it too).
+/private/

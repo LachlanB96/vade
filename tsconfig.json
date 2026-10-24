@@ -1,0 +1,8 @@
+{
+  // tsc over Blueprint's TypeScript: engine.ts, the dashboard, its browser script and the tests. The check runs it
+  // (node ../.typescript/check.cts), after the leak check's own tests.
+  "extends": "../.typescript/tsconfig.base.json",
+  "compilerOptions": { "lib": ["es2024", "dom", "dom.iterable"] },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", ".claude", "private"]
+}
