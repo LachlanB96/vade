@@ -497,6 +497,7 @@ The home index, briefings, design system and contracts are part of the system. A
 - The `.gitignore` leaves out what can be rebuilt: dependencies, build output, caches, logs.
 - The dashboard note, its stylesheet and the agent's memory for the project are in the repo. The memory folder the agent expects is a link to the project's `.claude/memory/`.
 - A pre-commit hook scans every commit for secrets and blocks it on a find. A real secret moves out of the repo (rule 7). Only a confirmed false positive is allowlisted.
+- Hooks every repo needs live in one shared folder that the global git config names. A repo that needs hooks of its own, like a public one with a stricter check, has them run the shared hook first: a repo's own hooks folder replaces the shared one, and nothing says so.
 - One setup script, driven by a list of every repo, creates and checks them all. A new project is one more line in the list.
 
 **Why:** without history a bad change can't be undone, and without a repo there's nothing to copy off the machine.
@@ -566,6 +567,8 @@ This repo is public, so every commit and push runs a leak check:
 - A GitHub noreply email contains your username, which may be on the blocklist. A private list of allowed identities lets that exact commit author through. It never exempts file contents, paths or messages.
 
 The blocklist is personal data itself, so it never leaves your machine: it isn't in the repo, and it isn't a repository secret. The git hooks run the whole check, blocklist included, before anything reaches GitHub. GitHub's own check runs gitleaks alone, as a second line for secrets.
+
+Setting a repo's own hooks folder switches off any hooks your global git config sets for every repo, without a word. So each hook here runs the hook of the same name from the folder `core.hooksPath` names in your global (or else system) git config first, and the leak check after it. If either refuses, so does the commit or push.
 
 To use it in a clone:
 

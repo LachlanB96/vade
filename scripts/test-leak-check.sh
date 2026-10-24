@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Tests for leak-check.sh. Each case runs the script in a throwaway git repo with a made-up
-# blocklist and a stand-in gitleaks, so it tests the blocklist logic and never reads the real lists.
+# Tests for leak-check.sh, and for the hooks in .githooks that run it after the machine's own
+# hooks (machine-hook.sh). Each case runs in a throwaway git repo with a made-up blocklist, a
+# stand-in gitleaks and made-up global and system git configs, so it tests the logic and never
+# reads the real lists or runs the machine's real hooks.
 #
 #   bash scripts/test-leak-check.sh
 
@@ -20,6 +22,11 @@ mkdir -p "$tmp/bin" "$tmp/nohooks"
 stub() { printf '#!/usr/bin/env bash\nexit %s\n' "$1" >"$tmp/bin/gitleaks"; chmod +x "$tmp/bin/gitleaks"; }
 stub 0
 export PATH="$tmp/bin:$PATH"
+
+# Empty global and system configs, so nothing from the machine's own git config reaches a case.
+export GIT_CONFIG_GLOBAL="$tmp/global.gitconfig" GIT_CONFIG_SYSTEM="$tmp/system.gitconfig"
+: >"$GIT_CONFIG_GLOBAL"
+: >"$GIT_CONFIG_SYSTEM"
 
 # Made-up personal strings, with the padding, comment, blank line and CR a hand-edited list can have.
 export VADE_BLOCKLIST_FILE="$tmp/blocklist.txt"
@@ -151,6 +158,124 @@ git -C "$h" add a.md
 git -C "$h" commit -q -m "for Zanzibar Quill"
 run "$h" --all
 expect "a personal commit message in history fails" 1 "message contains a blocklisted string"
+
+# The hooks. A repo with this repo's .githooks and scripts, and a machine hooks folder whose
+# stand-in hooks log their name, arguments and stdin, and exit with $MACHINE_EXIT.
+mkdir -p "$tmp/machine"
+for name in pre-commit commit-msg pre-push; do
+  # shellcheck disable=SC2016 # expanded when the stand-in runs
+  printf '#!/usr/bin/env bash\necho "%s $*" >>"%s"\n[ %s != pre-push ] || sed "s/^/  stdin: /" >>"%s"\nexit "${MACHINE_EXIT:-0}"\n' \
+    "$name" "$tmp/machine.log" "$name" "$tmp/machine.log" >"$tmp/machine/$name"
+  chmod +x "$tmp/machine/$name"
+done
+machine() { git config --file "$GIT_CONFIG_GLOBAL" core.hooksPath "$1"; }
+unmachine() { git config --file "$GIT_CONFIG_GLOBAL" --unset core.hooksPath || true; }
+
+hooked() {
+  local d
+  d="$(repo)"
+  cp -R "$here/../.githooks" "$d/.githooks"
+  mkdir -p "$d/scripts"
+  cp "$check" "$here/machine-hook.sh" "$d/scripts/"
+  git -C "$d" config core.hooksPath .githooks
+  echo "$d"
+}
+
+# gitrun <dir> <git args...>: like run, for a git command whose hooks are under test.
+gitrun() {
+  local d="$1"
+  shift
+  code=0
+  : >"$tmp/machine.log"
+  out="$(git -C "$d" "$@" 2>&1)" || code=$?
+}
+
+# logged <regex>: the machine's hooks wrote a line matching it.
+logged() { grep -q -E -e "$1" "$tmp/machine.log"; }
+
+k="$(hooked)"
+machine "$tmp/machine"
+
+echo "garden" >"$k/a.md"
+git -C "$k" add a.md
+gitrun "$k" commit -q -m "Add the garden"
+expect "a commit runs the machine's pre-commit and commit-msg hooks, then the leak check" 0
+logged '^pre-commit $' || fail "the machine's pre-commit hook didn't run"
+logged '^commit-msg .*COMMIT_EDITMSG$' || fail "the machine's commit-msg hook didn't get the message file"
+
+echo "zanzibar quill" >"$k/b.md"
+git -C "$k" add b.md
+gitrun "$k" commit -q -m "Add b"
+expect "the leak check still runs after the machine's hooks pass" 1 "staged files contain blocklisted strings"
+logged '^pre-commit' || fail "the machine's pre-commit hook didn't run before the leak check"
+git -C "$k" rm -q --cached b.md
+rm "$k/b.md"
+
+echo "more garden" >>"$k/a.md"
+git -C "$k" add a.md
+MACHINE_EXIT=1 gitrun "$k" commit -q -m "More garden"
+expect "the machine's pre-commit hook refusing blocks the commit" 1 "own pre-commit hook refused"
+grep -q "leak-check:" <<<"$out" && fail "the leak check ran after the machine's hook refused"
+
+sed -i 's/exit "${MACHINE_EXIT:-0}"/exit 3/' "$tmp/machine/commit-msg"
+gitrun "$k" commit -q -m "More garden"
+expect "the machine's commit-msg hook refusing blocks the commit" 1 "own commit-msg hook refused \(exit 3"
+sed -i 's/exit 3/exit "${MACHINE_EXIT:-0}"/' "$tmp/machine/commit-msg"
+
+git init -q --bare "$tmp/remote.git"
+gitrun "$k" push -q "$tmp/remote.git" HEAD:refs/heads/main
+expect "a push runs the machine's pre-push hook with the refs on stdin, then the leak check" 0 "checked 1 commit"
+logged '^pre-push .*remote\.git .*remote\.git$' || fail "the machine's pre-push hook didn't get the remote"
+logged '^  stdin: HEAD [0-9a-f]+ refs/heads/main 0+$' || fail "the machine's pre-push hook didn't get the refs"
+
+MACHINE_EXIT=1 gitrun "$k" push -q "$tmp/remote.git" HEAD:refs/heads/second
+expect "the machine's pre-push hook refusing blocks the push" 1 "own pre-push hook refused"
+git -C "$tmp/remote.git" rev-parse -q --verify refs/heads/second >/dev/null && fail "the refused push reached the remote"
+
+unmachine
+gitrun "$k" commit -q -m "More garden"
+expect "with no machine hooks configured, the leak check runs alone" 0
+[ -s "$tmp/machine.log" ] && fail "a machine hook ran with none configured"
+
+git config --file "$GIT_CONFIG_SYSTEM" core.hooksPath "$tmp/machine"
+echo "even more" >>"$k/a.md"
+git -C "$k" add a.md
+gitrun "$k" commit -q -m "Even more"
+expect "the system config's hooks folder runs when the global config names none" 0
+logged '^pre-commit' || fail "the system config's hooks didn't run"
+mkdir -p "$tmp/global-machine"
+machine "$tmp/global-machine"
+echo "and more" >>"$k/a.md"
+git -C "$k" add a.md
+gitrun "$k" commit -q -m "And more"
+expect "the global config's hooks folder wins over the system one" 0
+[ -s "$tmp/machine.log" ] && fail "the system config's hooks ran though the global config names a folder"
+git config --file "$GIT_CONFIG_SYSTEM" --unset core.hooksPath
+
+mkdir -p "$tmp/home"
+cp -R "$tmp/machine" "$tmp/home/hooks"
+machine "~/hooks"
+echo "home" >>"$k/a.md"
+git -C "$k" add a.md
+HOME="$tmp/home" gitrun "$k" commit -q -m "Home"
+expect "a hooks folder under ~ is found" 0
+logged '^pre-commit' || fail "the hooks folder under ~ wasn't used"
+
+machine "$tmp/no-such-folder"
+echo "missing" >>"$k/a.md"
+git -C "$k" add a.md
+gitrun "$k" commit -q -m "Missing"
+expect "a hooks folder that doesn't exist is a pass, named without its path" 0 "doesn't exist"
+grep -q "no-such-folder" <<<"$out" && fail "the warning shows the folder's path"
+
+machine "$k/.githooks"
+echo "loop" >>"$k/a.md"
+git -C "$k" add a.md
+code=0
+: >"$tmp/machine.log"
+out="$(timeout 60 git -C "$k" commit -q -m "Loop" 2>&1)" || code=$?
+expect "a machine hooks folder that is this repo's own runs once, with no loop" 0
+unmachine
 
 echo
 echo "$passed passed, $failed failed"

@@ -5,3 +5,6 @@ desktop.ini
 
 # Obsidian settings, if this folder is opened as its own vault
 .obsidian/
+
+# Claude Code's local state: worktrees, settings, memory. Memory is never published.
+.claude/
