@@ -1,0 +1,2 @@
+# LF everywhere. Shell scripts and hooks fail in bash with CRLF endings.
+* text=auto eol=lf

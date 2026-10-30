@@ -1,0 +1,10 @@
+# OS clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code's local state: worktrees, settings, memory. Memory is never published.
+.claude/
+
+# Working files that stay on the owner's machine (the leak check refuses them too).
+/private/
